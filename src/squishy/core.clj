@@ -9,17 +9,19 @@
                            (config :aws :creds :secret-key))
     (.setRegion (config :aws :sqs :region))))
 
-(defn- create-queue [queue-key]
-  (sqs/create-queue (client) (config :aws :sqs queue-key)))
+(defn- create-queue [client queue-key]
+  (sqs/create-queue client (config :aws :sqs queue-key)))
 
 (def ^:private memoized-create-queue (memoize create-queue))
 
-(defn- get-queue [] (memoized-create-queue :queue))
+(defn- get-queue [client]
+  (memoized-create-queue client :queue))
 
-(defn- get-fail-queue [] (memoized-create-queue :fail-queue))
+(defn- get-fail-queue [client]
+  (memoized-create-queue client :fail-queue))
 
 (defn report-error [client body error]
-  (let [q (get-fail-queue)]
+  (let [q (get-fail-queue client)]
     (sqs/send client q (pr-str {:body body :error error}))))
 
 (defn safe-process [client f]
@@ -33,7 +35,7 @@
 
 (defn consume-messages
   [client f]
-  (let [q (get-queue)]
+  (let [q (get-queue client)]
     (future
       (do
         (info "Consuming SQS messages from" q)
