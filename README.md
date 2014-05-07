@@ -1,14 +1,14 @@
 # squishy
 
-A Clojure library designed to ... well, that part is up to you.
+A Clojure library for safely and reliably consuming SQS messages.
 
 ## Usage
 
-FIXME
+TODO
 
 ## License
 
-Copyright © 2014 FIXME
+Copyright © 2014 Democracy Works, Inc.
 
 Distributed under the Eclipse Public License either version 1.0 or (at
 your option) any later version.
