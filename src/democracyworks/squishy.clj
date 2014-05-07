@@ -1,5 +1,5 @@
-(ns democracyworks.squishy.core
-  (:require [squishy.data-readers]
+(ns democracyworks.squishy
+  (:require [democracyworks.squishy.data-readers]
             [cemerick.bandalore :as sqs]
             [turbovote.resource-config :refer [config]]
             [clojure.tools.logging :refer [error info]]))
