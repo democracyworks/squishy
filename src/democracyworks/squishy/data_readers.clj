@@ -1,4 +1,4 @@
-(ns squishy.data-readers
+(ns democracyworks.squishy.data-readers
   (:import [com.amazonaws.regions Region Regions]))
 
 (defn aws-region [region-name]

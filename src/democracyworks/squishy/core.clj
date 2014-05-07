@@ -1,4 +1,4 @@
-(ns squishy.core
+(ns democracyworks.squishy.core
   (:require [squishy.data-readers]
             [cemerick.bandalore :as sqs]
             [turbovote.resource-config :refer [config]]
