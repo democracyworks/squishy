@@ -22,7 +22,7 @@
 
 (defn- report-error [client body error]
   (let [q (get-fail-queue client)]
-    (sqs/send client q (pr-str {:body body :error error}))))
+    (sqs/send client q (pr-str {:body body :error (.getMessage error)}))))
 
 (defn- safe-process [client f]
   (fn [message]
