@@ -20,11 +20,11 @@
 (defn- get-fail-queue [client]
   (memoized-create-queue client :fail-queue))
 
-(defn report-error [client body error]
+(defn- report-error [client body error]
   (let [q (get-fail-queue client)]
     (sqs/send client q (pr-str {:body body :error error}))))
 
-(defn safe-process [client f]
+(defn- safe-process [client f]
   (fn [message]
     (info "Processing SQS message:" (str "<<" message ">>"))
     (try (f message)
