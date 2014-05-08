@@ -9,4 +9,5 @@
                  [org.slf4j/slf4j-simple "1.7.6"]
                  [turbovote.resource-config "0.1.1"]
                  [com.cemerick/bandalore "0.0.5"]
-                 [riemann-clojure-client "0.2.9"]])
+                 [riemann-clojure-client "0.2.9"]]
+  :profiles {:test {:resource-paths ["test-resources"]}})

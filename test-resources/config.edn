@@ -1,0 +1,9 @@
+{:aws {:creds {:access-key "test-access-key"
+               :secret-key "test-secret-key"}
+       :s3 {:bucket "democracyworks-squishy-test"}
+       :sqs {:region #aws/region "US_WEST_2" ; see below
+             :queue "democracyworks-squishy-test"
+             :fail-queue "democracyworks-squishy-failures-test"}}
+ :datomic {:uri "datomic:mem://squishy-test"
+           :partition :squishy-test}
+ :api {:port 8083}}
