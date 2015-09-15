@@ -2,7 +2,7 @@
   (:require [democracyworks.squishy.data-readers]
             [cemerick.bandalore :as sqs]
             [turbovote.resource-config :refer [config]]
-            [clojure.tools.logging :refer [error info]]))
+            [clojure.tools.logging :as log]))
 
 (defn client []
   (doto (sqs/create-client (config :aws :creds :access-key)
@@ -26,11 +26,11 @@
 
 (defn safe-process [client f]
   (fn [message]
-    (info "Processing SQS message:" (str "<<" message ">>"))
+    (log/info "Processing SQS message:" (str "<<" message ">>"))
     (try (f message)
       (catch Exception e
         (let [body (:body message)]
-          (error "Failed to process" body e)
+          (log/error "Failed to process" body e)
           (report-error client body e))))))
 
 (defn consume-messages
@@ -38,7 +38,7 @@
   (let [q (get-queue client)]
     (future
       (do
-        (info "Consuming SQS messages from" q)
+        (log/info "Consuming SQS messages from" q)
         (dorun
          (map (sqs/deleting-consumer client (safe-process client f))
               (sqs/polling-receive client q :max-wait Long/MAX_VALUE :limit 10)))))))
