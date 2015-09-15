@@ -7,5 +7,4 @@
                  [com.amazonaws/aws-java-sdk "1.7.8.1"]
                  [org.clojure/tools.logging "0.2.6"]
                  [org.slf4j/slf4j-simple "1.7.7"]
-                 [com.cemerick/bandalore "0.0.5"]
-                 [riemann-clojure-client "0.2.10"]])
+                 [com.cemerick/bandalore "0.0.5"]])
