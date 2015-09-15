@@ -14,7 +14,7 @@
 
 (defn safe-process [client fail-queue-url f]
   (fn [message]
-    (log/info "Processing SQS message:" (str "<<" message ">>"))
+    (log/debug "Processing SQS message:" (str "<<" message ">>"))
     (try (f message)
       (catch Exception e
         (let [body (:body message)]
