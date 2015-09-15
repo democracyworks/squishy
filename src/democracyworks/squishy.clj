@@ -1,44 +1,33 @@
 (ns democracyworks.squishy
   (:require [democracyworks.squishy.data-readers]
             [cemerick.bandalore :as sqs]
-            [turbovote.resource-config :refer [config]]
             [clojure.tools.logging :as log]))
 
-(defn client []
-  (doto (sqs/create-client (config :aws :creds :access-key)
-                           (config :aws :creds :secret-key))
-    (.setRegion (config :aws :sqs :region))))
+(defn client [access-key secret-key region]
+  (doto (sqs/create-client access-key
+                           secret-key)
+    (.setRegion region)))
 
-(defn create-queue [client queue-key]
-  (sqs/create-queue client (config :aws :sqs queue-key)))
+(defn report-error [client fail-queue-url body error]
+  (let [fail-message (pr-str {:body body :error (.getMessage error)})]
+    (sqs/send client fail-queue-url fail-message)))
 
-(def memoized-create-queue (memoize create-queue))
-
-(defn get-queue [client]
-  (memoized-create-queue client :queue))
-
-(defn get-fail-queue [client]
-  (memoized-create-queue client :fail-queue))
-
-(defn report-error [client body error]
-  (let [q (get-fail-queue client)]
-    (sqs/send client q (pr-str {:body body :error (.getMessage error)}))))
-
-(defn safe-process [client f]
+(defn safe-process [client fail-queue-url f]
   (fn [message]
     (log/info "Processing SQS message:" (str "<<" message ">>"))
     (try (f message)
       (catch Exception e
         (let [body (:body message)]
           (log/error "Failed to process" body e)
-          (report-error client body e))))))
+          (report-error client fail-queue-url body e))))))
 
 (defn consume-messages
-  [client f]
-  (let [q (get-queue client)]
+  [client queue-name fail-queue-name f]
+  (let [queue-url (sqs/create-queue client queue-name)
+        fail-queue-url (sqs/create-queue client fail-queue-name)]
     (future
       (do
-        (log/info "Consuming SQS messages from" q)
+        (log/info "Consuming SQS messages from" queue-url)
         (dorun
-         (map (sqs/deleting-consumer client (safe-process client f))
-              (sqs/polling-receive client q :max-wait Long/MAX_VALUE :limit 10)))))))
+         (map (sqs/deleting-consumer client (safe-process client fail-queue-url f))
+              (sqs/polling-receive client queue-url :max-wait Long/MAX_VALUE :limit 10)))))))
