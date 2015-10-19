@@ -1,6 +1,6 @@
-(ns democracyworks.squishy-test
+(ns squishy.core-test
   (:require [clojure.test :refer :all]
-            [democracyworks.squishy :refer :all :as squishy]
+            [squishy.core :refer :all]
             [cemerick.bandalore :as sqs]))
 
 (deftest consume-messages-test

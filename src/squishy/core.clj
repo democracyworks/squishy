@@ -1,5 +1,5 @@
-(ns democracyworks.squishy
-  (:require [democracyworks.squishy.data-readers]
+(ns squishy.core
+  (:require [squishy.data-readers]
             [cemerick.bandalore :as sqs]
             [clojure.tools.logging :as log]))
 

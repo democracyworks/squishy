@@ -1,1 +1,1 @@
-{aws/region democracyworks.squishy.data-readers/aws-region}
+{aws/region squishy.data-readers/aws-region}
