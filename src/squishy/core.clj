@@ -25,31 +25,38 @@
 (def backoff-start 1000)
 (def max-failures  10)
 
+(defn with-backoff* [backoff-start max-failures f]
+  (let [rec (atom 0)
+        reset (fn [] (reset! rec 0))]
+    (loop []
+      (when (try
+              (f reset)
+              nil
+              (catch Throwable t
+                (log/error "Failure:" t)
+                (swap! rec inc)
+                :keep-trying))
+        (if (>= @rec max-failures)
+          (log/fatal "Failed" @rec "times, exiting.")
+          (do
+            (Thread/sleep (* backoff-start (Math/pow 2 (dec @rec))))
+            (recur)))))))
+
+(defmacro with-backoff [[reset backoff-start max-failures] & body]
+  `(with-backoff* ~backoff-start ~max-failures
+     (fn [~reset] ~@body)))
+
 (defn consume-messages
   [creds queue-name fail-queue-name f]
   (future
-    (let [rec (atom {:failures 0
-                     :backoff  backoff-start})]
-      (loop []
-        (when (try
-                (let [client (client (:access-key creds)
-                                     (:access-secret creds)
-                                     (:region creds))
-                      queue-url (sqs/create-queue client queue-name)
-                      fail-queue-url (sqs/create-queue client fail-queue-name)
-                      consume (sqs/deleting-consumer client (safe-process client fail-queue-url f))]
-                  (log/info "Consuming SQS messages from" queue-url)
-                  (doseq [message (sqs/polling-receive client queue-url :max-wait Long/MAX_VALUE :limit 10)]
-                    (reset! rec {:failures 0 :backoff backoff-start})
-                    (consume message)))
-                (catch Throwable t
-                  (log/error "Failed to consume-messages" t)
-                  (swap! rec update :failures inc)
-                  :keep-trying))
-          (let [{:keys [failures backoff]} @rec]
-            (if (>= failures max-failures)
-              (log/fatal "Failed" failures "times, exiting.")
-              (do
-                (Thread/sleep backoff)
-                (swap! rec update :backoff (partial * 2))
-                (recur)))))))))
+    (with-backoff [reset backoff-start max-failures]
+      (let [client (client (:access-key creds)
+                           (:access-secret creds)
+                           (:region creds))
+            queue-url (sqs/create-queue client queue-name)
+            fail-queue-url (sqs/create-queue client fail-queue-name)
+            consume (sqs/deleting-consumer client (safe-process client fail-queue-url f))]
+        (log/info "Consuming SQS messages from" queue-url)
+        (doseq [message (sqs/polling-receive client queue-url :max-wait Long/MAX_VALUE :limit 10)]
+          (reset)
+          (consume message))))))
