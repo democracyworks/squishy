@@ -63,4 +63,31 @@
         @(consume-messages
           nil nil nil #(swap! done conj %))
         (is (= [1 2 3]
+               @done)))))
+
+  (testing "fails after n times"
+    (let [queue (atom (concat
+                       (map constantly (range 3))
+                       (map #(fn [& _]
+                               (throw (RuntimeException. (str %))))
+                            (range 10))
+                       (map constantly (range 3))))
+          done (atom [])]
+      (with-redefs [client (constantly nil)
+                    backoff-start 1 ;; so it doesn't take forever
+                    max-failures 10
+                    sqs/create-queue (constantly nil)
+                    sqs/polling-receive (fn [& _]
+                                          (letfn [(r []
+                                                    (lazy-seq
+                                                     (when (seq @queue)
+                                                       (let [x (first @queue)]
+                                                         (swap! queue rest)
+                                                         (cons (x) (r))))))]
+                                            (r)))
+                    sqs/delete (constantly nil)
+                    sqs/send (constantly nil)]
+        @(consume-messages
+          nil nil nil #(swap! done conj %))
+        (is (= [0 1 2]
                @done))))))
