@@ -3,6 +3,8 @@
             [cemerick.bandalore :as sqs]
             [clojure.tools.logging :as log]))
 
+(def ^:dynamic *visibility-timeout* 30) ; seconds; the SQS default
+
 (defn client [access-key secret-key region]
   (doto (sqs/create-client access-key
                            secret-key)
@@ -20,14 +22,14 @@
                            (catch Exception e
                              (let [body (:body message)]
                                (log/error e "Failed to process" body)
-                               (report-error client fail-queue-url body e)))))])
-    (loop [timeout 30] ; default visibility timeout is 30 secs
-      (if (realized? processor)
-        @processor
-        (let [new-timeout (int (* timeout 1.5))]
-          (Thread/sleep (* (- timeout 10) 1000))
-          (sqs/change-message-visibility client queue-url message new-timeout)
-          (recur new-timeout))))))
+                               (report-error client fail-queue-url body e)))))]
+      (loop [timeout *visibility-timeout*]
+        (if (realized? processor)
+          @processor
+          (let [new-timeout (int (* timeout 1.5))]
+            (Thread/sleep (* 1000 (- timeout (/ timeout 4))))
+            (sqs/change-message-visibility client queue-url message new-timeout)
+            (recur new-timeout)))))))
 
 (defn consume-messages
   [client queue-name fail-queue-name f]
