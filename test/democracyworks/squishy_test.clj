@@ -8,6 +8,7 @@
     (let [result (atom [])]
       (with-redefs [squishy/get-queue (constantly nil)
                     sqs/delete (constantly nil)
+                    sqs/change-message-visibility (constantly nil)
                     sqs/polling-receive (constantly ["msg 1" "msg 2"])]
         (is (= ["MSG 1" "MSG 2"]
                (do
@@ -19,6 +20,7 @@
   (testing "deletes msgs as it consumes them"
     (let [queue (atom ["msg 1" "msg 2"])]
       (with-redefs [squishy/get-queue (constantly nil)
+                    sqs/change-message-visibility (constantly nil)
                     sqs/polling-receive (constantly @queue)
                     sqs/delete (fn [client message]
                                  (swap! queue #(drop 1 %)))]
@@ -31,6 +33,7 @@
     (let [fail-queue (atom [])]
       (with-redefs [squishy/get-queue (constantly nil)
                     squishy/get-fail-queue (constantly nil)
+                    sqs/change-message-visibility (constantly nil)
                     sqs/polling-receive (constantly [{:body "msg 1"}
                                                      {:body "msg 2"}])
                     sqs/delete (constantly nil)
