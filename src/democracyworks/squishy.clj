@@ -27,11 +27,20 @@
 (defn- safe-process [client f]
   (fn [message]
     (info "Processing SQS message:" (str "<<" message ">>"))
-    (try (f message)
-      (catch Exception e
-        (let [body (:body message)]
-          (error "Failed to process" body e)
-          (report-error client body e))))))
+    (let [q (get-queue client)
+          processor (future
+                      (try (f message)
+                           (catch Exception e
+                             (let [body (:body message)]
+                               (error e "Failed to process" body)
+                               (report-error client body e)))))]
+      (loop [timeout 30] ; default visibility timeout is 30 secs
+        (if (realized? processor)
+          @processor
+          (let [new-timeout (int (* timeout 1.5))]
+            (Thread/sleep (* (- timeout 10) 1000))
+            (sqs/change-message-visibility client q message new-timeout)
+            (recur new-timeout)))))))
 
 (defn consume-messages
   [client f]
