@@ -10,13 +10,12 @@
                     sqs/delete (constantly nil)
                     sqs/change-message-visibility (constantly nil)
                     sqs/polling-receive (constantly ["msg 1" "msg 2"])]
-        (binding [*visibility-timeout* 0.1]
-          (is (= ["MSG 1" "MSG 2"]
-                 (do
-                   @(consume-messages nil nil nil
-                                      #(swap! result conj
-                                              (clojure.string/upper-case %)))
-                   @result)))))))
+        (is (= ["MSG 1" "MSG 2"]
+               (do
+                 @(consume-messages nil nil nil {:visibility-timeout 0.1}
+                                    #(swap! result conj
+                                            (clojure.string/upper-case %)))
+                 @result))))))
 
   (testing "deletes msgs as it consumes them"
     (let [queue (atom ["msg 1" "msg 2"])]
@@ -25,11 +24,11 @@
                     sqs/polling-receive (constantly @queue)
                     sqs/delete (fn [client message]
                                  (swap! queue #(drop 1 %)))]
-        (binding [*visibility-timeout* 0.1]
-          (is (= []
-                 (do
-                   @(consume-messages nil nil nil (constantly nil))
-                   @queue)))))))
+        (is (= []
+               (do
+                 @(consume-messages nil nil nil {:visibility-timeout 0.1}
+                                    (constantly nil))
+                 @queue))))))
 
   (testing "puts msgs on fail queue when processing fn throws exception"
     (let [fail-queue (atom [])]
@@ -39,9 +38,9 @@
                                                      {:body "msg 2"}])
                     sqs/delete (constantly nil)
                     sqs/send (fn [client q msg] (swap! fail-queue conj msg))]
-        (binding [*visibility-timeout* 0.1]
-          (is (= ["{:body \"msg 1\", :error \"msg 1 failed\"}"
-                  "{:body \"msg 2\", :error \"msg 2 failed\"}"]
-                 (do @(consume-messages
-                       nil nil nil #(throw (Exception. (str (:body %) " failed"))))
-                     @fail-queue))))))))
+        (is (= ["{:body \"msg 1\", :error \"msg 1 failed\"}"
+                "{:body \"msg 2\", :error \"msg 2 failed\"}"]
+               (do @(consume-messages
+                     nil nil nil {:visibility-timeout 0.1}
+                     #(throw (Exception. (str (:body %) " failed"))))
+                   @fail-queue)))))))
