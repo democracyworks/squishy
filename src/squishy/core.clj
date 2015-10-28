@@ -42,8 +42,8 @@
   ([client queue-name fail-queue-name options f]
    (let [queue-url (sqs/create-queue client queue-name)
          fail-queue-url (sqs/create-queue client fail-queue-name)
-         visibility-timeout (or (:visibility-timeout options)
-                                default-visibility-timeout)]
+         visibility-timeout (get options :visibility-timeout
+                                 default-visibility-timeout)]
      (future
        (do
          (log/info "Consuming SQS messages from" queue-url)
