@@ -18,19 +18,19 @@
   [client queue-url fail-queue-url visibility-timeout f]
   (fn [message]
     (log/debug "Processing SQS message:" (str "<<" message ">>"))
-    (let [processor (future
-                      (try (f message)
-                           (catch Exception e
-                             (let [body (:body message)]
-                               (log/error e "Failed to process" body)
-                               (report-error client fail-queue-url body e)))))]
-      (loop [timeout visibility-timeout]
-        (if (realized? processor)
-          @processor
-          (let [new-timeout (int (* timeout 1.5))]
-            (Thread/sleep (* 1000 (- timeout (/ timeout 4))))
-            (sqs/change-message-visibility client queue-url message new-timeout)
-            (recur new-timeout)))))))
+    (let [timeout-increaser (future
+                              (loop [timeout visibility-timeout]
+                                (let [new-timeout (int (* timeout 1.5))]
+                                  (Thread/sleep (* 1000 (- timeout (/ timeout 4))))
+                                  (sqs/change-message-visibility client queue-url message new-timeout)
+                                  (recur new-timeout))))]
+      (try (f message)
+           (catch Exception e
+             (let [body (:body message)]
+               (log/error e "Failed to process" body)
+               (report-error client fail-queue-url body e)))
+           (finally
+             (future-cancel timeout-increaser))))))
 
 (defn consume-messages
   ([client queue-name fail-queue-name f]
