@@ -21,7 +21,7 @@
     (let [timeout-increaser (future
                               (loop [timeout visibility-timeout]
                                 (let [new-timeout (int (* timeout 1.5))]
-                                  (Thread/sleep (* 1000 (- timeout (/ timeout 4))))
+                                  (Thread/sleep (* 1000 timeout 0.75))
                                   (sqs/change-message-visibility client queue-url message new-timeout)
                                   (recur new-timeout))))]
       (try (f message)
