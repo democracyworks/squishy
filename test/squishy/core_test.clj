@@ -12,7 +12,7 @@
                     sqs/polling-receive (constantly ["msg 1" "msg 2"])]
         (is (= ["MSG 1" "MSG 2"]
                (do
-                 @(consume-messages nil nil nil {:visibility-timeout 0.1}
+                 @(consume-messages nil nil nil
                                     #(swap! result conj
                                             (clojure.string/upper-case %)))
                  @result))))))
@@ -26,7 +26,7 @@
                                  (swap! queue #(drop 1 %)))]
         (is (= []
                (do
-                 @(consume-messages nil nil nil {:visibility-timeout 0.1}
+                 @(consume-messages nil nil nil
                                     (constantly nil))
                  @queue))))))
 
@@ -41,6 +41,6 @@
         (is (= ["{:body \"msg 1\", :error \"msg 1 failed\"}"
                 "{:body \"msg 2\", :error \"msg 2 failed\"}"]
                (do @(consume-messages
-                     nil nil nil {:visibility-timeout 0.1}
+                     nil nil nil
                      #(throw (Exception. (str (:body %) " failed"))))
                    @fail-queue)))))))
