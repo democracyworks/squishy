@@ -7,4 +7,5 @@
                  [com.amazonaws/aws-java-sdk "1.7.8.1"]
                  [org.clojure/tools.logging "0.3.1"]
                  [org.slf4j/slf4j-simple "1.7.12"]
-                 [com.cemerick/bandalore "0.0.6"]])
+                 [com.cemerick/bandalore "0.0.6"]]
+  :deploy-repositories {"releases" :clojars})
