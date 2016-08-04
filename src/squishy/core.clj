@@ -35,25 +35,30 @@
 (def backoff-start 1000)
 (def max-failures  10)
 
-(defn with-backoff* [backoff-start max-failures f]
+(defonce consumer-futures (atom {}))
+
+(defn with-backoff* [backoff-start max-failures consumer-id f]
   (let [rec (atom 0)
         reset (fn [] (reset! rec 0))]
     (loop []
       (when (try
               (f reset)
+              (swap! consumer-futures dissoc consumer-id)
               nil
               (catch Exception t
-                (log/error "Failure:" t)
-                (swap! rec inc)
-                :keep-trying))
+                (when (get @consumer-futures consumer-id)
+                  (log/error "Failure:" t)
+                  (swap! rec inc)
+                  :keep-trying)))
         (if (>= @rec max-failures)
           (log/fatal "Failed" @rec "times, exiting.")
           (do
             (Thread/sleep (* backoff-start (Math/pow 2 (dec @rec))))
-            (recur)))))))
+            (when (get @consumer-futures consumer-id)
+              (recur))))))))
 
-(defmacro with-backoff [[reset backoff-start max-failures] & body]
-  `(with-backoff* ~backoff-start ~max-failures
+(defmacro with-backoff [[reset backoff-start max-failures consumer-id] & body]
+  `(with-backoff* ~backoff-start ~max-failures ~consumer-id
      (fn [~reset] ~@body)))
 
 (defn consume-messages
@@ -62,26 +67,32 @@
                      {:visibility-timeout default-visibility-timeout}
                      f))
   ([creds queue-name fail-queue-name options f]
-   (future
-     (with-backoff [reset backoff-start max-failures]
-       (let [client (client (:access-key creds)
-                            (:access-secret creds)
-                            (:region creds))
-             queue-url (sqs/create-queue client queue-name)
-             fail-queue-url (sqs/create-queue client fail-queue-name)
-             visibility-timeout (get options :visibility-timeout
-                                     default-visibility-timeout)
-             consume (sqs/deleting-consumer client
-                                            (safe-process client
-                                                          queue-url
-                                                          fail-queue-url
-                                                          visibility-timeout
-                                                          f))]
-         (log/info "Consuming SQS messages from" queue-url)
-         (doseq [message (sqs/polling-receive client
-                                              queue-url
-                                              :max-wait Long/MAX_VALUE
-                                              :limit 10)]
-           (reset)
-           (consume message)))))))
+   (let [consumer-id (java.util.UUID/randomUUID)
+         message-future
+         (future
+           (with-backoff [reset backoff-start max-failures consumer-id]
+             (let [client (client (:access-key creds)
+                                  (:access-secret creds)
+                                  (:region creds))
+                   queue-url (sqs/create-queue client queue-name)
+                   fail-queue-url (sqs/create-queue client fail-queue-name)
+                   visibility-timeout (get options :visibility-timeout
+                                           default-visibility-timeout)
+                   consume (sqs/deleting-consumer client
+                                                  (safe-process client
+                                                                queue-url
+                                                                fail-queue-url
+                                                                visibility-timeout
+                                                                f))]
+               (log/info "Consuming SQS messages from" queue-url)
+               (doseq [message (sqs/polling-receive client
+                                                    queue-url
+                                                    :max-wait Long/MAX_VALUE
+                                                    :limit 10)]
+                 (reset)
+                 (consume message)))))]
+     (swap! consumer-futures assoc consumer-id message-future)
+     consumer-id)))
 
+(defn stop-consumer [consumer-id]
+  (swap! consumer-futures dissoc consumer-id))
