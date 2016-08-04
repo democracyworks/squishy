@@ -9,6 +9,7 @@
       (with-redefs [client (constantly nil)
                     sqs/create-queue (constantly nil)
                     sqs/delete (constantly nil)
+                    sqs/change-message-visibility (constantly nil)
                     sqs/polling-receive (constantly ["msg 1" "msg 2"])]
         @(consume-messages nil nil nil
                            #(swap! result conj
@@ -20,23 +21,29 @@
     (let [queue (atom ["msg 1" "msg 2"])]
       (with-redefs [client (constantly nil)
                     sqs/create-queue (constantly nil)
+                    sqs/change-message-visibility (constantly nil)
                     sqs/polling-receive (constantly @queue)
                     sqs/delete (fn [client message]
                                  (swap! queue #(drop 1 %)))]
         @(consume-messages nil nil nil (constantly nil))
         (is (= []
-               @queue)))))
+               (do
+                 @(consume-messages nil nil nil
+                                    (constantly nil))
+                 @queue))))))
 
   (testing "puts msgs on fail queue when processing fn throws exception"
     (let [fail-queue (atom [])]
       (with-redefs [client (constantly nil)
                     sqs/create-queue (constantly nil)
+                    sqs/change-message-visibility (constantly nil)
                     sqs/polling-receive (constantly [{:body "msg 1"}
                                                      {:body "msg 2"}])
                     sqs/delete (constantly nil)
                     sqs/send (fn [client q msg] (swap! fail-queue conj msg))]
         @(consume-messages
-          nil nil nil #(throw (Exception. (str (:body %) " failed"))))
+          nil nil nil
+          #(throw (Exception. (str (:body %) " failed"))))
         (is (= ["{:body \"msg 1\", :error \"msg 1 failed\"}"
                 "{:body \"msg 2\", :error \"msg 2 failed\"}"]
                @fail-queue)))))
