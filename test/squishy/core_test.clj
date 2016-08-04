@@ -3,6 +3,10 @@
             [squishy.core :refer :all]
             [cemerick.bandalore :as sqs]))
 
+(defn blocking-consume-messages [f]
+  (let [consumer-id (consume-messages nil nil nil f)]
+    @(get @consumer-futures consumer-id)))
+
 (deftest consume-messages-test
   (testing "calls function arg on each msg"
     (let [result (atom [])]
@@ -11,9 +15,8 @@
                     sqs/delete (constantly nil)
                     sqs/change-message-visibility (constantly nil)
                     sqs/polling-receive (constantly ["msg 1" "msg 2"])]
-        @(consume-messages nil nil nil
-                           #(swap! result conj
-                                   (clojure.string/upper-case %)))
+        (blocking-consume-messages #(swap! result conj
+                                           (clojure.string/upper-case %)))
         (is (= ["MSG 1" "MSG 2"]
                @result)))))
 
@@ -25,11 +28,10 @@
                     sqs/polling-receive (constantly @queue)
                     sqs/delete (fn [client message]
                                  (swap! queue #(drop 1 %)))]
-        @(consume-messages nil nil nil (constantly nil))
+        (blocking-consume-messages (constantly nil))
         (is (= []
                (do
-                 @(consume-messages nil nil nil
-                                    (constantly nil))
+                 (blocking-consume-messages (constantly nil))
                  @queue))))))
 
   (testing "puts msgs on fail queue when processing fn throws exception"
@@ -41,9 +43,8 @@
                                                      {:body "msg 2"}])
                     sqs/delete (constantly nil)
                     sqs/send (fn [client q msg] (swap! fail-queue conj msg))]
-        @(consume-messages
-          nil nil nil
-          #(throw (Exception. (str (:body %) " failed"))))
+        (blocking-consume-messages
+         #(throw (Exception. (str (:body %) " failed"))))
         (is (= ["{:body \"msg 1\", :error \"msg 1 failed\"}"
                 "{:body \"msg 2\", :error \"msg 2 failed\"}"]
                @fail-queue)))))
@@ -67,8 +68,7 @@
                                             (r)))
                     sqs/delete (constantly nil)
                     sqs/send (constantly nil)]
-        @(consume-messages
-          nil nil nil #(swap! done conj %))
+        (blocking-consume-messages #(swap! done conj %))
         (is (= [1 2 3]
                @done)))))
 
@@ -94,8 +94,7 @@
                                             (r)))
                     sqs/delete (constantly nil)
                     sqs/send (constantly nil)]
-        @(consume-messages
-          nil nil nil #(swap! done conj %))
+        (blocking-consume-messages #(swap! done conj %))
         (is (= [0 1 2]
                @done)))))
 
@@ -119,7 +118,6 @@
                                             (r)))
                     sqs/delete (constantly nil)
                     sqs/send (constantly nil)]
-        @(consume-messages
-          nil nil nil #(swap! done conj %))
+        (blocking-consume-messages #(swap! done conj %))
         (is (= (range 100)
                @done))))))
