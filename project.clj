@@ -1,4 +1,4 @@
-(defproject democracyworks/squishy "1.0.1-SNAPSHOT"
+(defproject democracyworks/squishy "2.0.1-SNAPSHOT"
   :description "A library for consuming Amazon SQS queue messages"
   :url "https://github.com/democracyworks/squishy"
   :license {:name "Eclipse Public License"
@@ -7,4 +7,5 @@
                  [com.amazonaws/aws-java-sdk "1.7.8.1"]
                  [org.clojure/tools.logging "0.3.1"]
                  [org.slf4j/slf4j-simple "1.7.12"]
-                 [com.cemerick/bandalore "0.0.6"]])
+                 [com.cemerick/bandalore "0.0.6"]]
+  :deploy-repositories {"releases" :clojars})

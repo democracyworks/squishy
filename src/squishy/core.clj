@@ -17,7 +17,7 @@
 (defn safe-process
   [client queue-url fail-queue-url visibility-timeout f]
   (fn [message]
-    (log/debug "Processing SQS message:" (str "<<" message ">>"))
+    (log/debug "Processing SQS message:" (pr-str message))
     (let [timeout-increaser (future
                               (loop [timeout visibility-timeout]
                                 (let [new-timeout (int (* timeout 1.5))]
@@ -32,28 +32,56 @@
            (finally
              (future-cancel timeout-increaser))))))
 
+(def backoff-start 1000)
+(def max-failures  10)
+
+(defn with-backoff* [backoff-start max-failures f]
+  (let [rec (atom 0)
+        reset (fn [] (reset! rec 0))]
+    (loop []
+      (when (try
+              (f reset)
+              nil
+              (catch Exception t
+                (log/error "Failure:" t)
+                (swap! rec inc)
+                :keep-trying))
+        (if (>= @rec max-failures)
+          (log/fatal "Failed" @rec "times, exiting.")
+          (do
+            (Thread/sleep (* backoff-start (Math/pow 2 (dec @rec))))
+            (recur)))))))
+
+(defmacro with-backoff [[reset backoff-start max-failures] & body]
+  `(with-backoff* ~backoff-start ~max-failures
+     (fn [~reset] ~@body)))
+
 (defn consume-messages
-  ([client queue-name fail-queue-name f]
-   (consume-messages client
-                     queue-name
-                     fail-queue-name
+  ([creds queue-name fail-queue-name f]
+   (consume-messages creds queue-name fail-queue-name
                      {:visibility-timeout default-visibility-timeout}
                      f))
-  ([client queue-name fail-queue-name options f]
-   (let [queue-url (sqs/create-queue client queue-name)
-         fail-queue-url (sqs/create-queue client fail-queue-name)
-         visibility-timeout (get options :visibility-timeout
-                                 default-visibility-timeout)]
-     (future
-       (do
+  ([creds queue-name fail-queue-name options f]
+   (future
+     (with-backoff [reset backoff-start max-failures]
+       (let [client (client (:access-key creds)
+                            (:access-secret creds)
+                            (:region creds))
+             queue-url (sqs/create-queue client queue-name)
+             fail-queue-url (sqs/create-queue client fail-queue-name)
+             visibility-timeout (get options :visibility-timeout
+                                     default-visibility-timeout)
+             consume (sqs/deleting-consumer client
+                                            (safe-process client
+                                                          queue-url
+                                                          fail-queue-url
+                                                          visibility-timeout
+                                                          f))]
          (log/info "Consuming SQS messages from" queue-url)
-         (dorun
-          (map (sqs/deleting-consumer client (safe-process client
-                                                           queue-url
-                                                           fail-queue-url
-                                                           visibility-timeout
-                                                           f))
-               (sqs/polling-receive client
-                                    queue-url
-                                    :max-wait Long/MAX_VALUE
-                                    :limit 10))))))))
+         (doseq [message (sqs/polling-receive client
+                                              queue-url
+                                              :max-wait Long/MAX_VALUE
+                                              :limit 10)]
+           (reset)
+           (consume message)))))))
+
