@@ -3,9 +3,11 @@
   :url "https://github.com/democracyworks/squishy"
   :license {:name "Eclipse Public License"
             :url "http://www.eclipse.org/legal/epl-v10.html"}
-  :dependencies [[org.clojure/clojure "1.7.0"]
-                 [com.amazonaws/aws-java-sdk "1.7.8.1"]
+  :dependencies [[org.clojure/clojure "1.8.0"]
+                 [com.amazonaws/aws-java-sdk-sqs "1.11.23"]
                  [org.clojure/tools.logging "0.3.1"]
-                 [org.slf4j/slf4j-simple "1.7.12"]
-                 [com.cemerick/bandalore "0.0.6"]]
-  :deploy-repositories {"releases" :clojars})
+                 [ch.qos.logback/logback-classic "1.1.7"]
+                 [com.cemerick/bandalore "0.0.6"
+                  :exclusions [com.amazonaws/aws-java-sdk]]]
+  :deploy-repositories {"releases" :clojars}
+  :profiles {:test {:jvm-opts ["-Dlog-level=OFF"]}})
