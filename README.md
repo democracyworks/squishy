@@ -19,7 +19,7 @@ A Clojure library for safely and reliably consuming SQS messages.
              :access-secret "8jcNZ9mM..."
              :region #aws/region "US_EAST_1"}
       cid (sqs/consume-messages creds
-                                "incomming-queue"
+                                "incoming-queue"
                                 "failure-queue"
                                 process-message)]
   (reset! consumer-id cid))
