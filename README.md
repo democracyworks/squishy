@@ -47,7 +47,7 @@ trying to recover that consumer.
 
 ### Visibility timeouts
 
-> For some background on visibility timeouts in SQS, I recommend [reading 
+> For some background on visibility timeouts in SQS, we recommend [reading 
 Amazon's documentation](http://docs.aws.amazon.com/AWSSimpleQueueService/latest/SQSDeveloperGuide/AboutVT.html).
 
 In version 3.0.0, squishy gained the ability to adjust the visibility timeout
