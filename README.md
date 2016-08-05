@@ -47,14 +47,17 @@ trying to recover that consumer.
 
 ### Visibility timeouts
 
+> For some background on visibility timeouts in SQS, I recommend [reading 
+Amazon's documentation](http://docs.aws.amazon.com/AWSSimpleQueueService/latest/SQSDeveloperGuide/AboutVT.html).
+
 In version 3.0.0, squishy gained the ability to adjust the visibility timeout
 of the messages it's processing automatically. The visibility timeout default
 is 30 seconds, which means that 30 seconds after a consumer starts processing a
-message, SQS will make it available to other consumers. Since this is not 
-usually what you expect or want, squishy now informs SQS that it should 
-increase the visibility timeout of individual messages when it knows that the
-provided processing function is still processing that message. This means that
-other consumers won't see that message.
+message, SQS will make it available to other consumers if the original consumer
+hasn't deleted it. Since this is not usually what you expect or want, squishy 
+now informs SQS that it should increase the visibility timeout of individual 
+messages when it knows that the provided processing function is still 
+processing that message. This means that other consumers won't see the message.
 
 If your SQS queue has a different visibility timeout configured, you can use
 the 5-arity version of `consume-messages` to tell squishy when it should raise
