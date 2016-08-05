@@ -40,7 +40,7 @@ receives when you stop / undeploy your app as things to recover from. If you
 see the "Consuming SQS messages from..." log message after attempting to stop a
 squishy app, then you are running into this problem.
 
-As of version 3.0.0, you **MUST** keep the `consmer-id` returned by 
+As of version 3.0.0, you **MUST** keep the `consumer-id` returned by 
 `consume-messages` and call `(squishy.core/stop-consumer consumer-id)` when
 you are shutting down / undeploying your app. This will tell squishy to stop
 trying to recover that consumer.
