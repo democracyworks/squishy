@@ -8,7 +8,7 @@ A Clojure library for safely and reliably consuming SQS messages.
 (ns demo
   [squishy.core :as sqs])
 
-(defonce (atom consumer-id nil))
+(defonce consumer-id (atom nil))
 
 (defn process-message [message]
   (println "Processing: " message)
