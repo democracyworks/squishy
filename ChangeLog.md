@@ -1,6 +1,28 @@
 # Change Log
 
-## Changes between Squishy 1.0 and 2.0
+## Changes between 2.0.0 and 3.0.0
+ 
+### `consume-messages` now returns a consumer-id instead of a future
+
+In 1.0.0 it returned a future that you could cancel when you wanted to stop
+consuming messages. But in 2.0.0 that stopped working because of the retry
+loop added in that version.
+
+In 3.0.0 it will return a consumer-id instead. You can then call
+`(squishy.core/stop-consumer consumer-id)` when you want to stop processing.
+
+**This is a breaking change.**
+
+### `consume-messages` will now handle increasing the visibility timeout of SQS messages
+
+By default SQS queues have a visibility timeout of 30 seconds (though you can
+increase it in each queue's config). This means that if it takes your code
+longer than that timeout to process a message, SQS will make it available to
+other consumers. In 3.0.0, squishy will now tell SQS to increase the visibility
+timeout of a message that is still being processed so that you don't have 
+redundant processing.
+
+## Changes between Squishy 1.0.0 and 2.0.0
 
 ### `consume-messages` can recover from some SQS connection problems
 
