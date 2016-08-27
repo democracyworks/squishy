@@ -1,7 +1,16 @@
 # Change Log
 
+## Changes between 3.0.0 and 3.0.1
+
+### Excluded `logback.xml` from library JAR file
+
+Logging config files don't belong in library JARs, and having this one in their
+resulted in logback-using consumer code generating warnings about multiple
+logback configs on the classpath. Library consumers should get full control
+over their logging configs, warning-free.
+
 ## Changes between 2.0.0 and 3.0.0
- 
+
 ### `consume-messages` now returns a consumer-id instead of a future
 
 In 1.0.0 it returned a future that you could cancel when you wanted to stop
@@ -19,7 +28,7 @@ By default SQS queues have a visibility timeout of 30 seconds (though you can
 increase it in each queue's config). This means that if it takes your code
 longer than that timeout to process a message, SQS will make it available to
 other consumers. In 3.0.0, squishy will now tell SQS to increase the visibility
-timeout of a message that is still being processed so that you don't have 
+timeout of a message that is still being processed so that you don't have
 redundant processing.
 
 ## Changes between Squishy 1.0.0 and 2.0.0
