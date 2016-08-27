@@ -9,5 +9,6 @@
                  [ch.qos.logback/logback-classic "1.1.7"]
                  [com.cemerick/bandalore "0.0.6"
                   :exclusions [com.amazonaws/aws-java-sdk]]]
+  :jar-exclusions [#"logback\.xml"]
   :deploy-repositories {"releases" :clojars}
   :profiles {:test {:jvm-opts ["-Dlog-level=OFF"]}})
