@@ -4,7 +4,7 @@
 
 ### Excluded `logback.xml` from library JAR file
 
-Logging config files don't belong in library JARs, and having this one in their
+Logging config files don't belong in library JARs, and having this one in there
 resulted in logback-using consumer code generating warnings about multiple
 logback configs on the classpath. Library consumers should get full control
 over their logging configs, warning-free.
