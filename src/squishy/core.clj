@@ -61,6 +61,21 @@
   `(with-backoff* ~backoff-start ~max-failures ~consumer-id
      (fn [~reset] ~@body)))
 
+(defn pre-deleting-consumer
+  "Setting :no-retries to true will use this pre-deleting consumer which
+   deletes the message before processing. Generally this is a Bad Idea (TM),
+   but if you have to sometimes process messages that take longer than the
+   maximum visibility timeout, you have little choice but to delete the message
+   and hope processing completes normally."
+  [client fail-queue-url f]
+  (fn [message]
+    (sqs/delete client message)
+    (try (f message)
+         (catch Exception e
+           (let [body (:body message)]
+             (log/error e "Failed to process" body)
+             (report-error client fail-queue-url body e))))))
+
 (defn consume-messages
   ([creds queue-name fail-queue-name f]
    (consume-messages creds queue-name fail-queue-name
@@ -78,12 +93,15 @@
                    fail-queue-url (sqs/create-queue client fail-queue-name)
                    visibility-timeout (get options :visibility-timeout
                                            default-visibility-timeout)
-                   consume (sqs/deleting-consumer client
-                                                  (safe-process client
-                                                                queue-url
-                                                                fail-queue-url
-                                                                visibility-timeout
-                                                                f))]
+                   no-retries (get options :no-retries false)
+                   consume (if no-retries
+                             (pre-deleting-consumer client fail-queue-url f)
+                             (sqs/deleting-consumer client
+                                                    (safe-process client
+                                                                  queue-url
+                                                                  fail-queue-url
+                                                                  visibility-timeout
+                                                                  f)))]
                (log/info "Consuming SQS messages from" queue-url)
                (doseq [message (sqs/polling-receive client
                                                     queue-url
