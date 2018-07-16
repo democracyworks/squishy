@@ -76,6 +76,28 @@ It doesn't hurt to not do this as squishy assumes 30 second visibility timeouts
 by default. It would just result in more SQS API calls than are strictly
 necessary.
 
+### Very Long Running Jobs
+
+If you sometimes/often have jobs that run over the maximum visibility timeout
+for SQS (12 hours), you will get new copies of the message spawning without
+bounds every 12 hours until you manually intervene. Since this is undesireable,
+there is an option you can provide to `consume-messages` called `:delete-callback`.
+When set to true, your processing function will receive two arguments, the
+message to process and a callback function to be called when enough information has
+been stored to keep track of the job. Calling this function will then delete the
+message from SQS and no copies will spawn (presuming you have called this prior
+to the 12 hour maximum visibility timeout).
+
+```
+(defn my-processor [message delete-callback]
+  (record-job message)
+  (delete-callback)
+  (very-long-job-kickoff message))
+
+
+(sqs/consume-messages creds q-name f-q-name {:delete-callback true} my-processor)
+```
+
 ## License
 
 Copyright © 2014-2016 Democracy Works, Inc.
