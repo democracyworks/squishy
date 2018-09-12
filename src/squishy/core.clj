@@ -15,7 +15,7 @@
     (sqs/send client fail-queue-url fail-message)))
 
 (defn safe-process
-  [client queue-url fail-queue-url visibility-timeout f]
+  [client queue-url fail-queue-url visibility-timeout delete-callback f]
   (fn [message]
     (log/debug "Processing SQS message:" (pr-str message))
     (let [timeout-increaser (future
@@ -23,8 +23,14 @@
                                 (let [new-timeout (int (* timeout 1.5))]
                                   (Thread/sleep (* 1000 timeout 0.75))
                                   (sqs/change-message-visibility client queue-url message new-timeout)
-                                  (recur new-timeout))))]
-      (try (f message)
+                                  (recur new-timeout))))
+          callback (when delete-callback
+                     (fn []
+                       (sqs/delete client message)
+                       (future-cancel timeout-increaser)))]
+      (try (if callback
+             (f message callback)
+             (f message))
            (catch Exception e
              (let [body (:body message)]
                (log/error e "Failed to process" body)
@@ -33,7 +39,7 @@
              (future-cancel timeout-increaser))))))
 
 (def backoff-start 1000)
-(def max-failures  10)
+(def max-failures  2)
 
 (defonce consumer-futures (atom {}))
 
@@ -78,12 +84,15 @@
                    fail-queue-url (sqs/create-queue client fail-queue-name)
                    visibility-timeout (get options :visibility-timeout
                                            default-visibility-timeout)
-                   consume (sqs/deleting-consumer client
-                                                  (safe-process client
-                                                                queue-url
-                                                                fail-queue-url
-                                                                visibility-timeout
-                                                                f))]
+                   delete-callback (get options :delete-callback false)
+                   consume (sqs/deleting-consumer
+                            client
+                            (safe-process client
+                                          queue-url
+                                          fail-queue-url
+                                          visibility-timeout
+                                          delete-callback
+                                          f))]
                (log/info "Consuming SQS messages from" queue-url)
                (doseq [message (sqs/polling-receive client
                                                     queue-url
