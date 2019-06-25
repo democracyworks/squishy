@@ -1,4 +1,4 @@
-(defproject democracyworks/squishy "3.0.3-SNAPSHOT"
+(defproject democracyworks/squishy "3.1.0-SNAPSHOT"
   :description "A library for consuming Amazon SQS queue messages"
   :url "https://github.com/democracyworks/squishy"
   :license {:name "Eclipse Public License"
