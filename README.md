@@ -29,6 +29,17 @@ A Clojure library for safely and reliably consuming SQS messages.
 (sqs/stop-consumer @consumer-id)
 ```
 
+### Region
+
+You can send several values in for the `:region` component of the credentials.
+
+* "us-east-1": you can send in a string that conforms to the "name" of the region, lowercase with dashes
+* "US_EAST_1": you can send in a string that conforms to the string version of the Regions enum, uppercase with underscores
+* com.amazonaws.regions.Region: you can send in an actual instance of the Region class
+
+There's a data-reader tag defined as `#aws/region` that can convert a string in either of
+the top two formats into a Region class instance as well.
+
 ### Shutting down
 
 **IMPORTANT:** Squishy is quite aggressive at recovering from exceptions and

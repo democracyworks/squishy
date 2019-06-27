@@ -1,14 +1,26 @@
 (ns squishy.core
-  (:require [squishy.data-readers]
+  (:require [squishy.data-readers :as dr]
             [cemerick.bandalore :as sqs]
-            [clojure.tools.logging :as log]))
+            [clojure.tools.logging :as log])
+  (:import  [com.amazonaws.regions Region]))
 
 (def default-visibility-timeout 30) ; seconds
 
-(defn client [access-key secret-key region]
-  (doto (sqs/create-client access-key
-                           secret-key)
+(defmulti client
+  "Construct an SQS client instance from the provided credentials and region.
+   Region can be a string in either name (`us-east-1`) or enum (`US_EAST_1`)
+   format, or it can be an instance of com.amazonaws.regions.Region already."
+  (fn [_ _ region] (type region)))
+
+(defmethod client com.amazonaws.regions.Region [access-key secret-key region]
+  (doto (sqs/create-client access-key secret-key)
     (.setRegion region)))
+
+(defmethod client java.lang.String [access-key secret-key region]
+  (client access-key secret-key (dr/aws-region region)))
+
+(defmethod client :default [_ _ region]
+  (throw (RuntimeException. "Region must either be a string in either \"us-west-1\" or \"US_WEST_1\" format or an instance of com.amazonaws.regions.Region. You can also use the `#aws/region` data-reader tag in a configuration to convert a string in the above formats to the Java instance.")))
 
 (defn report-error [client fail-queue-url body error]
   (let [fail-message (pr-str {:body body :error (.getMessage error)})]
