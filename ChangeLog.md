@@ -1,5 +1,17 @@
 # Change Log
 
+## Changes between 3.0.1 and 3.1.0
+
+### Improved Region configuration support
+
+Whereas before the only acceptable string format for the `#aws/region` tag
+was the region enum format (i.e. "US_WEST_1"), the tag can now also take the
+more common name format (i.e. "us-west-1"). The `start-consumer` now can take
+either of the string formats or a `com.amazonaws.regions.Region` instance, whereas
+before it only took the instance type.
+
+See the Region section of the README.
+
 ## Changes between 3.0.0 and 3.0.1
 
 ### Excluded `logback.xml` from library JAR file
